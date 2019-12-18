@@ -1458,7 +1458,7 @@ def normalize(wave, flux, mode='poly', order=5):
     return norm
 
 
-def AirmassCor(obj_wave, obj_flux, airmass, airmass_file='apoextinct.dat'):
+def AirmassCor(obj_wave, obj_flux, airmass, airmass_file='apoextinct.dat', path=False):
     """
     Correct the spectrum based on the airmass
 
@@ -1480,8 +1480,12 @@ def AirmassCor(obj_wave, obj_flux, airmass, airmass_file='apoextinct.dat'):
     The flux array
     """
     # read in the airmass extinction curve
-    extinction_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                'resources/extinction')
+    if not path:
+        extinction_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                    'resources/extinction')
+    else:
+        extinction_dir = ''
+
     if len(airmass_file)==0:
         air_wave, air_cor = np.genfromtxt(os.path.join(extinction_dir, airmass_file),
                                        unpack=True,skip_header=2)
@@ -1498,7 +1502,7 @@ def AirmassCor(obj_wave, obj_flux, airmass, airmass_file='apoextinct.dat'):
 
 
 def DefFluxCal(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
-               display=False):
+               display=False, stdpath = False):
     """
 
     Parameters
@@ -1537,8 +1541,11 @@ def DefFluxCal(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
 
     """
     stdstar2 = stdstar.lower()
-    std_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                        'resources', 'onedstds')
+    if not stdpath:
+        std_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                            'resources', 'onedstds')
+    else:
+        std_dir = ''
 
     if os.path.isfile(os.path.join(std_dir, stdstar2)):
         std_wave, std_mag, std_wth = np.genfromtxt(os.path.join(std_dir, stdstar2),
@@ -1622,8 +1629,8 @@ def DefFluxCal(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
 
             plt.figure()
             plt.plot(obj_wave, obj_flux*(10**sensfunc2),'k',
-                        label='applied sensfunc')
-            plt.plot(std_wave, std_flux, 'ro', alpha=0.5, label='standard flux')
+                        label='applied sensfunc', lw=2)
+            plt.plot(std_wave, std_flux, 'ro', alpha=0.25, label='standard flux')
             plt.xlabel('Wavelength')
             plt.ylabel('Standard Star Flux')
             plt.legend()
