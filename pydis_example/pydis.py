@@ -12,8 +12,8 @@ e.g. DIS specifics:
 
 """
 
-import matplotlib
-matplotlib.use('TkAgg')
+# import matplotlib
+# matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.widgets import Cursor
@@ -210,8 +210,9 @@ def biascombine(biaslist, output='BIAS.fits', trim=True, silent=True):
     """
 
     # assume biaslist is a simple text file with image names
-    # e.g. ls flat.00*b.fits > bflat.lis
-    files = np.genfromtxt(biaslist,dtype=np.str)
+    # e.g. ls bias.00*b.fits > bias.lis
+    # files = np.genfromtxt(biaslist,dtype=np.str)
+    files = np.loadtxt(biaslist, dtype=np.str)
 
     if silent is False:
         print('biascombine: combining ' + str(len(files)) + ' files in ' + biaslist)
@@ -316,7 +317,8 @@ def flatcombine(flatlist, bias, output='FLAT.fits', trim=True, mode='spline',
 
     # assume flatlist is a simple text file with image names
     # e.g. ls flat.00*b.fits > bflat.lis
-    files = np.genfromtxt(flatlist,dtype=np.str)
+    # files = np.genfromtxt(flatlist,dtype=np.str)
+    files = np.loadtxt(flatlist, dtype=np.str)
 
     for i in range(0,len(files)):
         hdu_i = fits.open(files[i])
@@ -330,7 +332,7 @@ def flatcombine(flatlist, bias, output='FLAT.fits', trim=True, mode='spline',
         # check for bad regions (not illuminated) in the spatial direction
         ycomp = im_i.sum(axis=Saxis) # compress to spatial axis only
         illum_thresh = 0.8 # value compressed data must reach to be used for flat normalization
-        ok = np.where( (ycomp>= np.nanmedian(ycomp)*illum_thresh) )
+        ok = np.where( (ycomp>= np.nanmedian(ycomp)*illum_thresh) )[0]
 
         # assume a median scaling for each flat to account for possible different exposure times
         if (i==0):
@@ -351,8 +353,9 @@ def flatcombine(flatlist, bias, output='FLAT.fits', trim=True, mode='spline',
     if response is True:
         xdata = np.arange(all_data.shape[1]) # x pixels
 
-        # sum along spatial axis, smooth w/ 5pixel boxcar, take log of summed flux
-        flat_1d = np.log10(convolve(flat_stack.sum(axis=Waxis), Box1DKernel(5)))
+        # AVERAGE along spatial axis, smooth w/ 5pixel boxcar, take log of summed flux
+        # use the illuminated portion only - NOTE: has axis hard-coded...
+        flat_1d = np.log10(convolve(flat_stack[ok,:].mean(axis=Waxis), Box1DKernel(5)))
 
         if mode=='spline':
             spl = UnivariateSpline(xdata, flat_1d, ext=0, k=2 ,s=0.001)
@@ -366,7 +369,7 @@ def flatcombine(flatlist, bias, output='FLAT.fits', trim=True, mode='spline',
         if display is True:
             plt.figure()
             plt.plot(10.0**flat_1d)
-            plt.plot(xdata, flat_curve,'r')
+            plt.plot(xdata, flat_curve,'r', alpha=0.5, lw=0.5)
             plt.show()
 
         # divide median stacked flat by this RESPONSE curve
@@ -390,7 +393,7 @@ def flatcombine(flatlist, bias, output='FLAT.fits', trim=True, mode='spline',
     hduOut = fits.PrimaryHDU(flat)
     hduOut.writeto(output, overwrite=True)
 
-    return flat ,ok[0]
+    return flat ,ok
 
 
 def ap_trace(img, fmask=(1,), nsteps=20, interac=False,
