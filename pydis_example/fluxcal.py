@@ -63,6 +63,7 @@ def AirmassCor(obj_wave, obj_flux, airmass, airmass_file=''):
     2) airmass extinction file Table should be astropy units aware
     3) make other wavelength interpolation methods available (?)
     4) figure out if/how to point to observatory extinction library (?)
+    5) is this a function that should be moved to a different package? (specutils)
     """
 
     if len(airmass_file) == 0:
