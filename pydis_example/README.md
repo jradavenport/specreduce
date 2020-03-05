@@ -8,13 +8,13 @@ The primary example data comes from the red channel of DIS, a 2005
 observation of the M dwarf "Gl 669A". 
 
 ## Functions
--[x] aperture trace ([apextract.py]())
--[x] aperture extract  ([apextract.py]())
--[x] compute sensitivity function (sensfunc) from standard star ([fluxcal.py]())
--[x] apply sensfunc ([fluxcal.py]())
--[x] apply airmass extinction correction ([fluxcal.py]()) 
--[ ] spectral flat fielding (+ilumination corr)
--[ ] identify (+wavelength cal, reidentify, etc)
+- [x] aperture trace ([apextract.py]())
+- [x] aperture extract  ([apextract.py]())
+- [x] compute sensitivity function (sensfunc) from standard star ([fluxcal.py]())
+- [x] apply sensfunc ([fluxcal.py]())
+- [x] apply airmass extinction correction ([fluxcal.py]()) 
+- [ ] spectral flat fielding (+ilumination corr)
+- [ ] identify (+wavelength cal, reidentify, etc)
 
 ## Demo Notebooks
 - [extract and trace](apextract_demo.ipynb)
