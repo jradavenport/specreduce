@@ -29,6 +29,7 @@ def _mag2flux(wave, mag, zeropt=48.60):
     -------------------
     1) make input units awareness work (angstroms)
     2) use Spectrum1D object?
+    3) is this a function that should be moved to a different package? (specutils)
     '''
 
     # c = 2.99792458e18 # speed of light, in A/s
