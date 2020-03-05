@@ -109,7 +109,7 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
     Improvements Needed
     -------------------
     1) use Spectrum1D object for observed std spectrum
-    2) make units aware w/ catalog standard 
+    2) make units aware w/ catalog standard
     3) figure out if/how to point to standard star library (?)
     """
 
