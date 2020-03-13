@@ -13,13 +13,13 @@ observation of the M dwarf "Gl 669A".
 - [x] compute sensitivity function (sensfunc) from standard star ([fluxcal.py]())
 - [x] apply sensfunc ([fluxcal.py]())
 - [x] apply airmass extinction correction ([fluxcal.py]()) 
-- [ ] spectral flat fielding (+ilumination corr)
+- [x] spectral flat fielding (+ilumination corr)
 - [ ] identify (+wavelength cal, reidentify, etc)
 
 ## Demo Notebooks
 - [extract and trace](apextract_demo.ipynb)
 - [standard star sensfunc](fluxcal_demo.ipynb) 
-- spectral flat fielding
+- [flat fielding](flatfield_demo.ipynb)
 - identify (basic auto?)
 - compute & apply wavelength solution
 - [full basic reduction with PyDIS functions](apo05.ipynb) (a reference, not suggested for use)

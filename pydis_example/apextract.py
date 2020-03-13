@@ -290,7 +290,7 @@ def extract(img, trace_line, apwidth=8, skysep=3, skywidth=7, skydeg=0,
 
         plt.plot(np.arange(len(trace_line)), trace_line, c='C0')
         plt.fill_between(np.arange(len(trace_line)), trace_line + apwidth, trace_line-apwidth, color='C0', alpha=0.5)
-        plt.fill_between(np.arange(len(trace_line)), trace_line + apwidth+skysep, trace_line + apwidth+skysep+skywidth, color='C1', alpha=0.5)
+        plt.fill_between(np.arange(len(trace_line)), trace_line + apwidth + skysep, trace_line + apwidth + skysep + skywidth, color='C1', alpha=0.5)
         plt.fill_between(np.arange(len(trace_line)), trace_line - apwidth - skysep, trace_line - apwidth - skysep - skywidth, color='C1', alpha=0.5)
         plt.ylim(np.min(trace_line - (apwidth + skysep + skywidth)*2), np.max(trace_line + (apwidth + skysep + skywidth)*2))
         plt.show()
