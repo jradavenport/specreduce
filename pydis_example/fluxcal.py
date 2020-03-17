@@ -1,10 +1,12 @@
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.table import Table
 from scipy.interpolate import UnivariateSpline
 from astropy.constants import c as cc
+
+
+__all__ = ['AirmassCor', 'standard_sensfunc', 'apply_sensfunc']
+
 
 def _mag2flux(wave, mag, zeropt=48.60):
     '''

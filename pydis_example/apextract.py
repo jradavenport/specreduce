@@ -1,8 +1,10 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.interpolate import UnivariateSpline
+
+
+__all__ = ['trace', 'extract']
 
 
 def _gaus(x, a, b, x0, sigma):

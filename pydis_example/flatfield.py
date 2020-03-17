@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from astropy.convolution import convolve, Box1DKernel
 
 
+__all__ = ['find_illum', 'flat_response']
+
 def find_illum(flat, threshold=0.9):
     Waxis = 1 # wavelength axis
     # Saxis = 0 # spatial axis
