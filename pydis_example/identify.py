@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
 from scipy.optimize import curve_fit
 from scipy.interpolate import UnivariateSpline
-
+from astropy.table import Table
 
 __all__ = ['identify']
 
@@ -98,7 +98,7 @@ def find_peaks(wave, flux, pwidth=10, pthreshold=97, minsep=1):
 
 
 def identify(xpixels, flux, identify_mode='interact', fit_mode='spline',
-             linewave=[], autotol=10, polydeg=7):
+             linewave=[], autotol=10, polydeg=7, previous_file=''):
     '''
     identify's job is to find peaks/features and identify which wavelength they are
 
@@ -201,15 +201,16 @@ def identify(xpixels, flux, identify_mode='interact', fit_mode='spline',
         # A simple, greedy, line-finding solution.
         # Loop thru each detected peak, from center outwards. Find nearest
         # known list line. If no known line within tolerance, skip
+
+        # PLAN: predict solution w/ spline, start in middle, identify nearest match,
+        # every time there's a new match, recalc the spline sol'n, work all the way out
+        # this both identifies lines, and has byproduct of ending w/ a spline model
+
         xpoints = np.array([], dtype=np.float) # pixel line centers
         lpoints = np.array([], dtype=np.float) # wavelength line centers
 
         # find center-most lines, sort by dist from center pixels
         ss = np.argsort(np.abs(wcent_pix - np.nanmedian(xpixels)))
-
-        # PLAN: predict solution w/ spline, start in middle, identify nearest match,
-        # every time there's a new match, recalc the spline sol'n, work all the way out
-        # this both identifies lines, and has byproduct of ending w/ a spline model
 
         # 1st guess is the peak locations in the wavelength units as given by user
         wcent_guess = wcent_pix
@@ -227,6 +228,14 @@ def identify(xpixels, flux, identify_mode='interact', fit_mode='spline',
                     spl = UnivariateSpline(xpoints[xps], lpoints[xps], ext=0, k=3, s=1e3)
                     wcent_guess = spl(pcent_pix)
 
+    #######
+    if identify_mode.lower() == "previous":
+        # read a previously saved .lines file
+        if len(previous_file)==0:
+            raise ValueError('For identify_mode="previous", `previous_file` must give the path to the previously saved lines file.')
+
+        tbl = Table.read(previous_file, format='ascii', names=('pix', 'wave'))
+        xpoints, lpoints = tbl['pix'], tbl['wave']
 
     #######
     # if identify_mode.lower() == 'crosscor':
@@ -234,8 +243,6 @@ def identify(xpixels, flux, identify_mode='interact', fit_mode='spline',
 
 
     # now turn the (xpixel, wavelength) points -> wavelength(x)
-
-    #######
     # Require at least... 4 lines to generate a solution?
     if (len(xpoints) > 4):
         if (fit_mode.lower() == 'spline'):
