@@ -104,7 +104,7 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='linear', polydeg=9,
         directory to be used for the flux calibration. The user must provide the
         subdirectory and file name. For example:
 
-        >>> standard_sensfunc(obj_wave, obj_flux, stdstar='/spec50cal/bd284211.dat', mode='spline')  \
+        >>> standard_sensfunc(obj_wave, obj_flux, stdstar='spec50cal/bd284211.dat', mode='spline')  \
         # doctest: +SKIP
 
         If no std is supplied, or an improper path is given, will raise a ValueError.
