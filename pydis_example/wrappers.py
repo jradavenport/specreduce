@@ -4,6 +4,7 @@ from ccdproc import trim_image, Combiner
 from astropy import units as u
 import numpy as np
 from .flatfield import find_illum, flat_response
+# from .identify import identify
 
 
 def flatcombine(images, bias, readlist=True, response=True, trim=True, write=False):
@@ -99,3 +100,13 @@ def flatcombine(images, bias, readlist=True, response=True, trim=True, write=Fal
 
     # have a nice day
     return flat, ilum
+
+
+def identify_image(image, bias):
+    '''
+    a wrapper to read a HeNeAr image, trim, bias correct, extract a horizontal line, identify
+
+    '''
+
+
+    return

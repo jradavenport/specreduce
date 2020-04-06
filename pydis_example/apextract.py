@@ -220,7 +220,7 @@ def extract(img, trace_line, apwidth=8, skysep=3, skywidth=7, skydeg=0,
         sky subtracted!
     skysubflux : 1-d array
         The integrated sky values along each column, suitable for
-        subtracting from the output of ap_extract
+        subtracting from the onedspec output
     fluxerr : 1-d array
         the uncertainties of the flux values
 

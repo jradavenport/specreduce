@@ -88,7 +88,7 @@ def AirmassCor(obj_wave, obj_flux, airmass, airmass_file=''):
     return obj_flux * airmass_ext
 
 
-def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
+def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='linear', polydeg=9,
                       display=False):
     """
     Compute the standard star sensitivity function.
@@ -104,7 +104,7 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
         directory to be used for the flux calibration. The user must provide the
         subdirectory and file name. For example:
 
-        >>> standard_sensfunc(obj_wave, obj_flux, stdstar='/ctiocal/eg21', mode='spline')  \
+        >>> standard_sensfunc(obj_wave, obj_flux, stdstar='/spec50cal/bd284211.dat', mode='spline')  \
         # doctest: +SKIP
 
         If no std is supplied, or an improper path is given, will raise a ValueError.
