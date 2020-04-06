@@ -3,12 +3,13 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 from scipy.interpolate import UnivariateSpline
 from astropy.constants import c as cc
+import os
 
 
-__all__ = ['AirmassCor', 'standard_sensfunc', 'apply_sensfunc']
+__all__ = ['AirmassCor', 'standard_sensfunc', 'apply_sensfunc', 'mag2flux']
 
 
-def _mag2flux(wave, mag, zeropt=48.60):
+def mag2flux(wave, mag, zeropt=48.60):
     '''
     Convert magnitudes to flux units. This is important for dealing with standards
     and files from IRAF, which are stored in AB mag units. To be clear, this converts
@@ -30,6 +31,8 @@ def _mag2flux(wave, mag, zeropt=48.60):
     Improvements Needed
     -------------------
     1) make input units awareness work (angstroms)
+        in fact, can this be totally done within astropy units?
+        https://docs.astropy.org/en/stable/units/logarithmic_units.html
     2) use Spectrum1D object?
     3) is this a function that should be moved to a different package? (specutils)
     '''
@@ -97,7 +100,14 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
     obj_flux : 1-d array
         The flux array of the observed standard star spectrum
     stdstar : str
-        Path to the standard star file to use for flux calibration
+        Name of the standard star file in the specreduce/datasets/onedstds
+        directory to be used for the flux calibration. The user must provide the
+        subdirectory and file name. For example:
+
+        >>> standard_sensfunc(obj_wave, obj_flux, stdstar='/ctiocal/eg21', mode='spline')  \
+        # doctest: +SKIP
+
+        If no std is supplied, or an improper path is given, will raise a ValueError.
     mode : str, optional
         either "linear", "spline", or "poly" (Default is spline)
     polydeg : float, optional
@@ -117,10 +127,23 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
     3) figure out if/how to point to standard star library (?)
     """
 
-    std = Table.read(stdstar, format='ascii', names=('wave', 'mag', 'width'))
+    if stdstar is None:
+         msg1 = "Error: No 'onedstd' standard star file has been specified." \
+                "Cannot proceed further."
+         raise ValueError(msg1)
+
+    std_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                           'datasets', 'onedstds')
+
+    if not os.path.isfile(os.path.join(std_dir, stdstar)):
+        msg2 = "No valid standard star found at: " + os.path.join(std_dir, stdstar)
+        raise ValueError(msg2)
+
+    std = Table.read(os.path.join(std_dir, stdstar),
+                     format='ascii', names=('wave', 'mag', 'width'))
 
     # standard star spectrum is stored in magnitude units (IRAF conventions)
-    std_flux = _mag2flux(std['wave'], std['mag'])
+    std_flux = mag2flux(std['wave'], std['mag'])
 
     # Automatically exclude some lines b/c resolution dependent response
     badlines = np.array([6563, 4861, 4341], dtype='float') # Balmer lines
@@ -152,7 +175,7 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='spline', polydeg=9,
     # if invalid interpolation mode selected, make it spline
     if mode.lower() not in ('linear', 'spline', 'poly'):
         mode = 'spline'
-        print("WARNING: invalid mode set. Changing to spline")
+        print("WARNING: invalid mode set. Changing to default mode 'spline'")
 
     # interpolate the calibration (sensfunc) on to observed wavelength grid
     if mode.lower()=='linear':
