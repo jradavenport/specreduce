@@ -302,7 +302,7 @@ def identify_widget(xpixels, flux, silent=False):
     # Handle button clicks
     def onbuttonclick(_):
         xpxl.append(xval.value)
-        waves.append(linename.value)
+        waves.append(float(linename.value))
         print(xpxl, waves)
 
         ax.axvline(xval.value, lw=1, c='r', alpha=0.7)
@@ -317,4 +317,5 @@ def identify_widget(xpixels, flux, silent=False):
     # Display widgets
     display(widgets.HBox([xval, linename, button]))
 
-    return np.array(xpxl), np.array(waves)
+    # return np.array(xpxl), np.array(waves)
+    return xpxl, waves
