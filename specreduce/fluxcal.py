@@ -103,7 +103,7 @@ def AirmassCor(object_spectrum, airmass, Xfile):
     # output_spec = object_spectrum.multiply(object_spectrum.flux, airmass_ext)
     # output_spec.flux = obj_flux * airmass_ext
     # return output_spec
-    return airmass_ext
+    return object_spectrum.multiply(airmass_ext * u.dimensionless_unscaled)
 
 
 def onedstd(stdstar):
