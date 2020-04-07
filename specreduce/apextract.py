@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.interpolate import UnivariateSpline
+from astropy.table import Table
 
 
 __all__ = ['trace', 'extract']
@@ -163,7 +164,8 @@ def trace(img, ilum=(1,), nbins=20, guess=-1, window=0, display=False):
     else:
         mx = np.arange(0, img.shape[Waxis])
         my = np.zeros_like(mx) * np.NaN
-        print("TRACE ERROR: No Valid points found in trace")
+        import warnings
+        warnings.warn("TRACE ERROR: No Valid points found in trace")
 
     if display is True:
         plt.figure()
@@ -194,7 +196,7 @@ def extract(img, trace_line, apwidth=8, skysep=3, skywidth=7, skydeg=0,
 
     Parameters
     ----------
-    img : 2d numpy array, or CCDData object
+    img : CCDData object
         This is the image to run extract over
     trace_line : 1-d array
         The spatial positions (Y axis) corresponding to the center of the
@@ -215,14 +217,15 @@ def extract(img, trace_line, apwidth=8, skysep=3, skywidth=7, skydeg=0,
 
     Returns
     -------
-    onedspec : 1-d array
-        The summed flux at each column about the trace. Note: is not
-        sky subtracted!
-    skysubflux : 1-d array
-        The integrated sky values along each column, suitable for
-        subtracting from the onedspec output
-    fluxerr : 1-d array
-        the uncertainties of the flux values
+    extract table : astropy table, with columns:
+        flux
+            The summed flux at each column about the trace. Note: is not
+            sky subtracted!
+        fluxerr
+            the uncertainties of the flux values
+        skyflux
+            The integrated sky values along each column, suitable for
+            subtracting from the `flux` above
 
 
     Improvements Needed
@@ -231,8 +234,6 @@ def extract(img, trace_line, apwidth=8, skysep=3, skywidth=7, skydeg=0,
         same wavelengths as the trace (BIG IMPROVEMENT)
     2. optionally allow mode to be either simple aperture (current) or the
         "optimal" (variance weighted) extraction algorithm
-    3. Return Spectrum1D object (or objects, for both flux and sky separately?)
-    4. Make aware of exposure time to get counts/s later (?)
     """
 
     if apwidth < 1:
@@ -297,4 +298,8 @@ def extract(img, trace_line, apwidth=8, skysep=3, skywidth=7, skydeg=0,
         plt.ylim(np.min(trace_line - (apwidth + skysep + skywidth)*2), np.max(trace_line + (apwidth + skysep + skywidth)*2))
         # plt.show()
 
-    return onedspec, skysubflux, fluxerr
+    tbl_out = Table()
+    tbl_out.add_columns([onedspec * img.unit, fluxerr * img.unit, skysubflux * img.unit],
+                        names=['flux', 'fluxerr', 'skyflux'])
+    # return onedspec, skysubflux, fluxerr
+    return tbl_out
