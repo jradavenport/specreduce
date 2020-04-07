@@ -42,7 +42,7 @@ def mag2flux(wave, mag, zeropt=48.60):
     return flux
 
 
-def AirmassCor(obj_wave, obj_flux, airmass, airmass_file=''):
+def AirmassCor(obj_wave, obj_flux, airmass, obs_file=''):
     """
     Correct the spectrum based on the airmass. Requires observatory extinction file
 
@@ -54,9 +54,12 @@ def AirmassCor(obj_wave, obj_flux, airmass, airmass_file=''):
         The 1-d or 2-d flux array of the spectrum
     airmass : float
         The value of the airmass. Note: not the header keyword.
-    airmass_file : str, {'apoextinct.dat', 'ctioextinct.dat', 'kpnoextinct.dat', 'ormextinct.dat'}
-        The path to the airmass extinction ascii file, with format:
-        [wavelength (AA), Extinction (Mag per Airmass)]
+    obs_file : str, {'apoextinct.dat', 'ctioextinct.dat', 'kpnoextinct.dat', 'ormextinct.dat'}
+        The observatory-specific airmass extinction file. If not known for your
+        observatory, use one of the provided files (e.g. `kpnoextinct.dat`).
+
+        Following IRAF standard, extinction files have 2-column format
+        wavelength (Angstroms), Extinction (Mag per Airmass)
 
     Returns
     -------
@@ -71,11 +74,17 @@ def AirmassCor(obj_wave, obj_flux, airmass, airmass_file=''):
     5) is this a function that should be moved to a different package? (specutils)
     """
 
-    if len(airmass_file) == 0:
+    if len(obs_file) == 0:
         raise ValueError('Must select an observatory extinction file.')
 
+    dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                       'datasets', 'extinction')
+
+    if not os.path.isfile(os.path.join(dir, obs_file)):
+        msg2 = "No valid standard star found at: " + os.path.join(dir, obs_file)
+        raise ValueError(msg2)
     # read in the airmass extinction curve
-    Xfile = Table.read(airmass_file, format='ascii', names=('wave', 'X'))
+    Xfile = Table.read(os.path.join(dir, obs_file), format='ascii', names=('wave', 'X'))
     Xfile['wave'].unit = 'AA'
 
     # linear interpol airmass extinction onto observed wavelengths
