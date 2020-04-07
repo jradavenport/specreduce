@@ -295,6 +295,6 @@ def extract(img, trace_line, apwidth=8, skysep=3, skywidth=7, skydeg=0,
         plt.fill_between(np.arange(len(trace_line)), trace_line + apwidth + skysep, trace_line + apwidth + skysep + skywidth, color='C1', alpha=0.5)
         plt.fill_between(np.arange(len(trace_line)), trace_line - apwidth - skysep, trace_line - apwidth - skysep - skywidth, color='C1', alpha=0.5)
         plt.ylim(np.min(trace_line - (apwidth + skysep + skywidth)*2), np.max(trace_line + (apwidth + skysep + skywidth)*2))
-        plt.show()
+        # plt.show()
 
     return onedspec, skysubflux, fluxerr

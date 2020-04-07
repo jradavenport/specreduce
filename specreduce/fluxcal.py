@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 from scipy.interpolate import UnivariateSpline
 from astropy.constants import c as cc
+import astropy.units as u
 import os
 
 
@@ -39,21 +40,13 @@ def mag2flux(wave, mag, zeropt=48.60):
 
     # c = 2.99792458e18 # speed of light, in A/s
     flux = (10.0**( (mag + zeropt) / (-2.5))) * (cc.to('AA/s').value / wave ** 2.0)
-    return flux
+    return flux * u.erg / u.s / u.angstrom / (u.cm * u.cm)
 
-
-def AirmassCor(obj_wave, obj_flux, airmass, obs_file=''):
-    """
-    Correct the spectrum based on the airmass. Requires observatory extinction file
+def obs_extinction(obs_file):
+    '''
 
     Parameters
     ----------
-    obj_wave : 1-d array
-        The 1-d wavelength array of the spectrum
-    obj_flux : 1-d or 2-d array
-        The 1-d or 2-d flux array of the spectrum
-    airmass : float
-        The value of the airmass. Note: not the header keyword.
     obs_file : str, {'apoextinct.dat', 'ctioextinct.dat', 'kpnoextinct.dat', 'ormextinct.dat'}
         The observatory-specific airmass extinction file. If not known for your
         observatory, use one of the provided files (e.g. `kpnoextinct.dat`).
@@ -63,17 +56,8 @@ def AirmassCor(obj_wave, obj_flux, airmass, obs_file=''):
 
     Returns
     -------
-    The extinction corrected flux array
-
-    Improvements Needed
-    -------------------
-    1) switch inputs to utilize Spectrum1D object
-    2) airmass extinction file Table should be astropy units aware
-    3) make other wavelength interpolation methods available (?)
-    4) figure out if/how to point to observatory extinction library (?)
-    5) is this a function that should be moved to a different package? (specutils)
-    """
-
+    Astropy Table with the observatory extinction data
+    '''
     if len(obs_file) == 0:
         raise ValueError('Must select an observatory extinction file.')
 
@@ -87,27 +71,47 @@ def AirmassCor(obj_wave, obj_flux, airmass, obs_file=''):
     Xfile = Table.read(os.path.join(dir, obs_file), format='ascii', names=('wave', 'X'))
     Xfile['wave'].unit = 'AA'
 
+    return Xfile
+
+def AirmassCor(object_spectrum, airmass, Xfile):
+    """
+    Correct the spectrum based on the airmass. Requires observatory extinction file
+
+    Parameters
+    ----------
+    object_spectrum : Spectrum1D object
+    airmass : float
+        The value of the airmass. Note: NOT the header keyword.
+    Xfile : astropy table
+        The extinction table from `obs_extinction`, with columns ('wave', 'X')
+        that have standard units of: (angstroms, mag/airmass)
+
+    Returns
+    -------
+    The airmass corrected Spectrum1D object
+
+    """
+
+    obj_wave, obj_flux = object_spectrum.wavelength, object_spectrum.flux
+
     # linear interpol airmass extinction onto observed wavelengths
-    new_X = np.interp(obj_wave, Xfile['wave'], Xfile['X'])
+    new_X = np.interp(obj_wave.value, Xfile['wave'], Xfile['X'])
 
     # air_cor in units of mag/airmass, convert to flux/airmass
     airmass_ext = 10.0**(0.4 * airmass * new_X)
 
-    # arimas_ext is broadcast to obj_flux if it is a 2-d array
-    return obj_flux * airmass_ext
+    # output_spec = object_spectrum.multiply(object_spectrum.flux, airmass_ext)
+    # output_spec.flux = obj_flux * airmass_ext
+    # return output_spec
+    return airmass_ext
 
 
-def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='linear', polydeg=9,
-                      display=False):
-    """
-    Compute the standard star sensitivity function.
+def onedstd(stdstar):
+    '''
+    Pulls the onedstd from the supplied library
 
     Parameters
     ----------
-    obj_wave : 1-d array
-        The wavelength array of the observed standard star spectrum in Angstroms
-    obj_flux : 1-d array
-        The flux array of the observed standard star spectrum
     stdstar : str
         Name of the standard star file in the specreduce/datasets/onedstds
         directory to be used for the flux calibration. The user must provide the
@@ -117,10 +121,47 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='linear', polydeg=9,
         # doctest: +SKIP
 
         If no std is supplied, or an improper path is given, will raise a ValueError.
+
+    Returns
+    -------
+        astropy Table with onedstd data
+    '''
+    std_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                           'datasets', 'onedstds')
+
+    if not os.path.isfile(os.path.join(std_dir, stdstar)):
+        msg2 = "No valid standard star found at: " + os.path.join(std_dir, stdstar)
+        raise ValueError(msg2)
+
+    std = Table.read(os.path.join(std_dir, stdstar),
+                     format='ascii', names=('wave', 'mag', 'width'))
+    std['wave'].unit = u.angstrom
+    std['width'].unit = u.angstrom
+    # standard star spectrum is stored in magnitude units (IRAF conventions)
+    std_flux = mag2flux(std['wave'], std['mag'])
+
+    std['mag'].unit = u.mag
+    std.add_column(std_flux, name='flux')
+
+    return std
+
+
+def standard_sensfunc(object_spectrum, std, mode='linear', polydeg=9,
+                      display=False):
+    """
+    Compute the standard star sensitivity function.
+
+    Parameters
+    ----------
+    object_spectrum : Spectrum1D object
+        The observed standard star spectrum
+    std : astropy table
+        output from `onedstd`, has columns ('wave', 'width', 'mag', 'flux')
     mode : str, optional
-        either "linear", "spline", or "poly" (Default is spline)
+        either "linear", "spline", or "poly" (Default is linear)
     polydeg : float, optional
-        set the order of the polynomial to fit through (Default is 9)
+        if mode='poly', this is the order of the polynomial to fit through
+        (Default is 9)
     display : bool, optional
         If True, plot the sensfunc (Default is False)
 
@@ -131,28 +172,11 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='linear', polydeg=9,
 
     Improvements Needed
     -------------------
-    1) use Spectrum1D object for observed std spectrum
-    2) make units aware w/ catalog standard
-    3) figure out if/how to point to standard star library (?)
+    1) change "badlines" to use SpectralRegion
+        https://specutils.readthedocs.io/en/stable/spectral_regions.html
     """
 
-    if stdstar is None:
-         msg1 = "Error: No 'onedstd' standard star file has been specified." \
-                "Cannot proceed further."
-         raise ValueError(msg1)
-
-    std_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                           'datasets', 'onedstds')
-
-    if not os.path.isfile(os.path.join(std_dir, stdstar)):
-        msg2 = "No valid standard star found at: " + os.path.join(std_dir, stdstar)
-        raise ValueError(msg2)
-
-    std = Table.read(os.path.join(std_dir, stdstar),
-                     format='ascii', names=('wave', 'mag', 'width'))
-
-    # standard star spectrum is stored in magnitude units (IRAF conventions)
-    std_flux = mag2flux(std['wave'], std['mag'])
+    obj_wave, obj_flux = object_spectrum.wavelength, object_spectrum.flux
 
     # Automatically exclude some lines b/c resolution dependent response
     badlines = np.array([6563, 4861, 4341], dtype='float') # Balmer lines
@@ -161,18 +185,18 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='linear', polydeg=9,
     obj_flux_ds = np.array([], dtype=np.float)
     obj_wave_ds = np.array([], dtype=np.float)
     std_flux_ds = np.array([], dtype=np.float)
-    for i in range(len(std_flux)):
-        rng = np.where((obj_wave >= std['wave'][i] - std['width'][i] / 2.0) &
-                       (obj_wave < std['wave'][i] + std['width'][i] / 2.0))[0]
+    for i in range(len(std['flux'])):
+        rng = np.where((obj_wave.value >= std['wave'][i] - std['width'][i] / 2.0) &
+                       (obj_wave.value < std['wave'][i] + std['width'][i] / 2.0))[0]
 
         IsH = np.where((badlines >= std['wave'][i] - std['width'][i] / 2.0) &
                        (badlines < std['wave'][i] + std['width'][i] / 2.0))[0]
 
         # does this bin contain observed spectra, and no Balmer lines?
         if (len(rng) > 1) and (len(IsH) == 0):
-            obj_flux_ds = np.append(obj_flux_ds, np.nanmean(obj_flux[rng]))
+            obj_flux_ds = np.append(obj_flux_ds, np.nanmean(obj_flux.value[rng]))
             obj_wave_ds = np.append(obj_wave_ds, std['wave'][i])
-            std_flux_ds = np.append(std_flux_ds, std_flux[i])
+            std_flux_ds = np.append(std_flux_ds, std['flux'][i])
 
     # the ratio between the standard star catalog flux and observed flux
     ratio = np.abs(std_flux_ds / obj_flux_ds)
@@ -184,40 +208,55 @@ def standard_sensfunc(obj_wave, obj_flux, stdstar='', mode='linear', polydeg=9,
     # if invalid interpolation mode selected, make it spline
     if mode.lower() not in ('linear', 'spline', 'poly'):
         mode = 'spline'
-        print("WARNING: invalid mode set. Changing to default mode 'spline'")
+        import warnings
+        warnings.warn("WARNING: invalid mode set. Changing to default mode 'spline'")
 
     # interpolate the calibration (sensfunc) on to observed wavelength grid
     if mode.lower()=='linear':
-        sensfunc2 = np.interp(obj_wave, obj_wave_ds, LogSensfunc)
+        sensfunc2 = np.interp(obj_wave.value, obj_wave_ds, LogSensfunc)
     elif mode.lower()=='spline':
         spl = UnivariateSpline(obj_wave_ds, LogSensfunc, ext=0, k=2 ,s=0.0025)
-        sensfunc2 = spl(obj_wave)
+        sensfunc2 = spl(obj_wave.value)
     elif mode.lower()=='poly':
         fit = np.polyfit(obj_wave_ds, LogSensfunc, polydeg)
-        sensfunc2 = np.polyval(fit, obj_wave)
+        sensfunc2 = np.polyval(fit, obj_wave.value)
 
-    sensfunc_out = 10 ** sensfunc2
+    sensfunc_out = (10 ** sensfunc2) * std['flux'].unit / obj_flux.unit
 
     if display is True:
         plt.figure()
         plt.plot(obj_wave, obj_flux * sensfunc_out, c='C0',
                     label='Observed x sensfunc', alpha=0.5)
         # plt.scatter(std['wave'], std_flux, color='C1', alpha=0.75, label=stdstar)
-        plt.scatter(obj_wave_ds, std_flux_ds, color='C1', alpha=0.75, label=stdstar)
+        plt.scatter(obj_wave_ds, std_flux_ds, color='C1', alpha=0.75)#, label=stdstar)
 
         plt.xlabel('Wavelength')
         plt.ylabel('Flux')
 
-        plt.xlim(np.nanmin(obj_wave), np.nanmax(obj_wave))
-        plt.ylim(np.nanmin(obj_flux * sensfunc_out)*0.98, np.nanmax(obj_flux * sensfunc_out) * 1.02)
-        plt.legend()
+        plt.xlim(np.nanmin(obj_wave.value), np.nanmax(obj_wave.value))
+        plt.ylim(np.nanmin(obj_flux.value * sensfunc_out.value)*0.98,
+                 np.nanmax(obj_flux.value * sensfunc_out.value) * 1.02)
+        # plt.legend()
         plt.show()
-
 
     return sensfunc_out
 
 
 def apply_sensfunc(obj_wave, obj_flux, obj_err, cal_wave, sensfunc):
+    '''
+
+    :param obj_wave:
+    :param obj_flux:
+    :param obj_err:
+    :param cal_wave:
+    :param sensfunc:
+    :return:
+
+    Improvements Needed
+    -------------------
+    1) switch to Spectrum1D object
+    2) test for errors, etc
+    '''
     # the sensfunc should already be BASICALLY at the same wavelength grid as the target
     # BUT, just in case, we linearly resample it:
 
