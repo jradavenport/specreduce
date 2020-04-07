@@ -7,7 +7,7 @@ import astropy.units as u
 import os
 
 
-__all__ = ['AirmassCor', 'standard_sensfunc', 'apply_sensfunc', 'mag2flux']
+__all__ = ['airmass_cor', 'obs_extinction', 'standard_sensfunc', 'apply_sensfunc', 'mag2flux']
 
 
 def mag2flux(wave, mag, zeropt=48.60):
@@ -42,8 +42,10 @@ def mag2flux(wave, mag, zeropt=48.60):
     flux = (10.0**( (mag + zeropt) / (-2.5))) * (cc.to('AA/s').value / wave ** 2.0)
     return flux * u.erg / u.s / u.angstrom / (u.cm * u.cm)
 
+
 def obs_extinction(obs_file):
     '''
+    Load the observatory-specific airmass extinction file from the supplied library
 
     Parameters
     ----------
@@ -73,7 +75,8 @@ def obs_extinction(obs_file):
 
     return Xfile
 
-def AirmassCor(object_spectrum, airmass, Xfile):
+
+def airmass_cor(object_spectrum, airmass, Xfile):
     """
     Correct the spectrum based on the airmass. Requires observatory extinction file
 
@@ -108,7 +111,7 @@ def AirmassCor(object_spectrum, airmass, Xfile):
 
 def onedstd(stdstar):
     '''
-    Pulls the onedstd from the supplied library
+    Load the onedstd from the supplied library
 
     Parameters
     ----------
@@ -167,8 +170,8 @@ def standard_sensfunc(object_spectrum, std, mode='linear', polydeg=9,
 
     Returns
     -------
-    sensfunc : 1-d array
-        The sensitivity function for the standard star
+    sensfunc : astropy table
+        The wavelength and sensitivity function for the given standard star
 
     Improvements Needed
     -------------------
@@ -239,31 +242,35 @@ def standard_sensfunc(object_spectrum, std, mode='linear', polydeg=9,
         # plt.legend()
         plt.show()
 
-    return sensfunc_out
+    tbl_out = Table()
+    tbl_out.add_columns([obj_wave, sensfunc_out], names=['wave', 'S'])
+    return tbl_out
 
 
-def apply_sensfunc(obj_wave, obj_flux, obj_err, cal_wave, sensfunc):
+def apply_sensfunc(object_spectrum, sensfunc):
+    '''
+    Apply the derived sensitivity function, converts observed units (e.g. ADU/s)
+    to physical units (e.g. erg/s/cm2/A).
+
+    Sensitivity function is first linearly interpolated onto the wavelength scale
+    of the observed data, and then directly multiplied.
+
+    Parameters
+    ----------
+    object_spectrum : Spectrum1D object
+        the observed object spectrum to apply the sensfunc to
+    sensfunc : astropy table
+        the output of `standard_sensfunc`, table has columns ('wave', 'S')
+    Returns
+    -------
+    The sensfunc corrected Spectrum1D object
     '''
 
-    :param obj_wave:
-    :param obj_flux:
-    :param obj_err:
-    :param cal_wave:
-    :param sensfunc:
-    :return:
+    obj_wave, obj_flux = object_spectrum.wavelength, object_spectrum.flux
 
-    Improvements Needed
-    -------------------
-    1) switch to Spectrum1D object
-    2) test for errors, etc
-    '''
-    # the sensfunc should already be BASICALLY at the same wavelength grid as the target
-    # BUT, just in case, we linearly resample it:
+    # sort, in case the sensfunc wavelength axis is backwards
+    ss = np.argsort(obj_wave.value)
+    # interpolate the sensfunc onto the observed wavelength axis
+    sensfunc2 = np.interp(obj_wave.value, sensfunc['wave'][ss], sensfunc['S'][ss])
 
-    # ensure input array is sorted!
-    ss = np.argsort(cal_wave)
-
-    sensfunc2 = np.interp(obj_wave, cal_wave[ss], sensfunc[ss])
-
-    # then simply apply re-sampled sensfunc to target flux
-    return obj_flux * sensfunc2, obj_err * sensfunc2
+    return object_spectrum * (sensfunc2 * sensfunc['S'].unit)
