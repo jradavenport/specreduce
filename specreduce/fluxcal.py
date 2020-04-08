@@ -150,7 +150,7 @@ def onedstd(stdstar):
 
 
 def standard_sensfunc(object_spectrum, std, mode='linear', polydeg=9,
-                      display=False):
+                      badlines=[6563, 4861, 4341], display=False):
     """
     Compute the standard star sensitivity function.
 
@@ -167,6 +167,8 @@ def standard_sensfunc(object_spectrum, std, mode='linear', polydeg=9,
         (Default is 9)
     display : bool, optional
         If True, plot the sensfunc (Default is False)
+    badlines : array-like
+        A list of values (lines) to mask out of when generating sensfunc
 
     Returns
     -------
@@ -182,7 +184,7 @@ def standard_sensfunc(object_spectrum, std, mode='linear', polydeg=9,
     obj_wave, obj_flux = object_spectrum.wavelength, object_spectrum.flux
 
     # Automatically exclude some lines b/c resolution dependent response
-    badlines = np.array([6563, 4861, 4341], dtype='float') # Balmer lines
+    badlines = np.array(badlines, dtype='float') # Balmer lines
 
     # down-sample (ds) the observed flux to the standard's bins
     obj_flux_ds = np.array([], dtype=np.float)

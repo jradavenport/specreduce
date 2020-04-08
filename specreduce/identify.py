@@ -127,6 +127,10 @@ def identify(xpixels, flux, identify_mode='',
     # Check that identify mode is valid
 
     #######
+    # if identify_mode.lower() == 'interact':
+    #     xpoints, wpoints = identify_widget(xpixels, flux)
+
+    #######
     if identify_mode.lower() == 'nearest':
         if len(linewave)<1:
             msg_fail = '''
@@ -306,7 +310,7 @@ def identify_widget(xpixels, flux, silent=False):
         print(xpxl, waves)
 
         ax.axvline(xval.value, lw=1, c='r', alpha=0.7)
-        return xpxl, waves
+        return #xpxl, waves
 
     button.on_click(onbuttonclick)
 
